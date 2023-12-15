@@ -1,0 +1,70 @@
+ImePrezime: LazarLazarevic- 14 slova 
+Slovo%5:    31410314102303
+epruvete[]={3,1,4,1,0,3,1,4,1,0,2,3,0,3};
+Zeljena temperatura 14*5 = 70°C
+
+Potrebna elektronika: 
+1) Toplotni senzor LM35 (https://html.alldatasheet.com/html-pdf/517588/TI1/LM35/507/9/LM35.html)
+2) Mikrokontroler STM32F103C6(https://datasheetspdf.com/pdf-file/1109326/STMicroelectronics/STM32F103C6/1)
+3) ULN2803-8 Darlington spojeva(https://datasheet.lcsc.com/lcsc/2102221641_BL-Shanghai-Belling-ULN2803_C2690548.pdf)
+4) Drajver motora DM556(https://www.omc-stepperonline.com/download/DM556T.pdf)
+5) Dva step motora Nema34(https://www.ato.com/Content/doc/nema-34-stepper-motor-specs.pdf)
+
+Temperaturni senzor LM35 koji je obradjen u okviru vezbi na STM sajtu
+meri temperaturu epruveta i analogni signal salje na ulaz 
+mikrokontrolera gde se vrsi (AD) konverzija u digitalnu vrednost
+(rezolucijom od 12 bita) kojom mikrokontroler moze upravljati.
+
+Izlazni napon iz mikrokontrolera ne moze biti veci od 3.6V pa kao takav nije dovoljan
+da se posalje na drajver motora. Zato koristim ULN2803-8 Darlington spojeva koji
+ce na izlazu dati napon do maksimalnih 50V.
+
+Objasnjenje koda:
+Moje Ime i Prezime sadrzi 14 slova, kako pun krug ima 360 stepeni,
+epruvete ce se nalaziti na 25.71 stepena pomeraja motora.
+Jedan impuls motor okrene za 1.8 stepen sto znaci da je potrebno 14.28
+impulsa kako bi motor pomerio epruvete za po jedno mesto.
+Kako bih mogao da simuliram sa celim brojevima usvojicu da je 14 impulsa
+potrebno kako bi motor pomerio epruvete za po jedno mesto.
+**Pretpostavka da je nulta pozicija u nizu mesto odakle ce kasnije epruvetu
+  da pomeri traka(neki otvor ili lula)
+
+Citam temperaturu sa ulaznog pina i kondicioniram na opseg vrednosti od 0 do 1.5 posto je maksimalna temperatura koju
+moze da ocita senzor LM35 150°C, a napon na izlazu je 10mV po °C (dakle 150*10^-3=1.5V)
+
+Dokle god je trenutno izmerena temperatura manja od zeljene temperature(u mom slucaju 70°C) Motor 1 vrti epruvete. 
+Setujemo vrednosti za Enable, Direction(okretanje u smeru kazaljke na satu) i Impuls uz postovanje pravila koja su navedena
+u datasheetu:
+Enable mora biti ispred Direction minimalno 5µs
+Direction mora biti ispred Impulsa minimalno 5µs
+Minimalna sirina visokog nivoa ne sme biti manja od 2.5µs
+Minimalna sirina niskog nivoa ne sme biti manja od 2.5µs
+Kada se motor okrene za jedan korak(znaci da je generisano 14 impulsa), tu promenu belezimo tako sto se niz siftuje u levo, tako cemo
+u svakom trenutku imati uvid o poziciji motora.
+Primer:  3,|1|,4,1,0,3,1,4,1,0,2,3,0,3    ---->  |1|,4,1,0,3,1,4,1,0,2,3,0,3,3  (Slika 1)
+Kada trenutna temperatura dostigne zeljenu vrednost zasutavljamo Motor 1 tako sto onemogucimo Enable 
+
+Sada mozemo zadati broj od 0 do 4 u zavisnosti koju vrstu epruvete zelimo da stavimo u kutiju,
+nakon unosa broja racuna se najkraca putanja do zeljene epruvete kako bi Motor 1 napravio najmanji broj koraka.
+Kada odredim da li je Motoru 1 bliza epruveta sa rotiranjem u levo ili rotiranjem u desno tada startujem jedan od uslova
+"Motor 1 se okreće u desno za %d koraka" ili "Motor 1 se okreće u levo za %d koraka".
+Startovanje motora se isto vrsi setovanjem vrednosti na izlazne pinove mikrokontrolera koji dolaze 
+na Enable, Direction(0-ulevo, 1-udesno) i Impulse takodje uz postovanje pravila u datasheetu koja se odnose na vremensku dsitancu
+izmedju slanja impulsa.
+Okretanje motora u jednu ili drugu stranu inicira takodje siftovanje u levu
+odnosno desnu stranu kako bi motor na nultu poziciju doveo zeljenu epruvetu najkracim putem.  
+Kada motor napravi zadati broj koraka i dovede epruvetu na nultu poziciju, odakle se epruvete pokretnom trakom vode do kutije potrebno
+je onemoguciti Enable pin Motora 1 cime se motor zaustavlja. Okretanje motora u jednu ili drugu stranu inicira takodje siftovanje u levu
+odnosno desnu stranu kako bi motor na nultu poziciju doveo zeljenu epruvetu najkracim putem.(jer smo nultu poziciju niza usvojili kao mesto 
+odakle se odvode epruvete u kutiju)
+
+Kada smo dosli ovde epruveta stoji na mestu odakle ce je pokretna traka odvesti u kutiju, to je zadatak Motora 2,
+simuliranje uzimanja eprivete cemo izvrsiti tako sto cemo je smestiti u niz kutija
+Pokrecemo  Motor 2, koji ima zadatak da pomera traku, takodje kao u prethodnim slucajevima postujujuci pravila iz datasheeta za drajver DM556
+Usvojili smo da je traka duzine 50mm i da jednim korakom motor pomeri traku 5mm sto znaci da motor treba napraviti 10 koraka kako bi odveo epruvetu
+u kutiju.
+Da bi se motor okrenuo za jedan korak potrebno mu je 14 step signala(jedan korak)
+Posto je traka 50mm a jedan korak okrene traku za 5mm, potrbno je (50mm/5mm)*14 impulsa kako bi Motor 2 odveo epruvetu u kutiju
+Nakon sto je Motor 2 odveo u kutiju epruvetu onemogucavamo Enable pin kako bi se Motor 2 zaustavio.
+Simuliranje smestanja epruvete u kutiju sam uradio pomocu niza kutija(koji je inicijalno prazan) u koji ce se smestiti epruveta, a na njeno mesto unutar niza
+epruvete stavljam vrednos 404(bilo koji broj moze biti, a da se razlikuje od brojeva 0,1,2,3,4 koje mozemo birati koja ce ukazivati na to da se tu ne nalazi nijedna od komponenti ali ce motori svakako uzimati u obzir da postoji pozicija koja je sada prazna. 
